@@ -1,0 +1,74 @@
+Candidats_Admis = 
+DIVIDE(
+    [Nombre_Candidats],
+    CALCULATE(
+        COUNT('public Dim_candidat'[pk_candidat]),
+        'public Dim_candidat'[resultat] IN {"ADMIS(E)", "LISTE ATTENTE"}
+    )
+)
+
+Candidats_Attente = 
+DIVIDE(
+    [Nombre_Candidats],
+    CALCULATE(
+        COUNT('public Dim_candidat'[pk_candidat]),
+        'public Dim_candidat'[resultat] = "LISTE ATTENTE"
+    )
+)
+Competences_Communes = 
+CALCULATE(
+    COUNTROWS(
+        FILTER(
+            CROSSJOIN(
+                'public Dim_offre',
+                'public Dim_profil'
+            ),
+            'public Dim_offre'[Competence] = 'public Dim_profil'[Skills_Split]
+        )
+    )
+)
+DureeSansTravail = 
+VAR dateDiplome = SELECTEDVALUE('public fact_employabilite'[date_Diplome])
+VAR datePosition = SELECTEDVALUE('public fact_employabilite'[position_date_date])
+VAR duree = DATEDIFF(dateDiplome, datePosition, MONTH)
+RETURN 
+    IF(duree < 0, 0, duree)
+Inscriptions_Precedentes = 
+CALCULATE(
+    COUNT('public fact_Admission'[fk_candidat]),
+    FILTER(
+        ALLSELECTED('public fact_Admission'),
+        'public fact_Admission'[date_enregistrement] = YEAR(TODAY()) - 1
+    )
+)
+
+Nombre d'entreprises = 
+DISTINCTCOUNT('public Dim_profil'[company_name])
+Nombre de chômeurs = 
+CALCULATE(
+    COUNTROWS('public fact_employabilite'),
+    'public fact_employabilite'[position_date] = "N\A"
+)
+
+Nombre de travailleurs = 
+CALCULATE(
+    COUNTROWS('public fact_employabilite'),
+    'public fact_employabilite'[position_date] <> "N\A"
+)
+Nombre des offres = COUNTROWS('public fact_employabilite')
+Nombre des profils = COUNTROWS('public Dim_profil')
+Nombre_Candidats = 
+COUNT('public Dim_candidat'[pk_candidat])
+Taux d'employabilité (%) = 
+DIVIDE(
+    [Nombre de travailleurs],
+    [Nombre des profils],
+    0
+) * 100
+
+Taux_Evolution_Inscriptions = 
+DIVIDE(
+    [Nombre_Candidats] - [Inscriptions_Precedentes],
+    [Inscriptions_Precedentes],
+    0
+) * 100
